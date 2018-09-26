@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lmeliberty/NetpingCordovaSDK.git"
+    "url": "git+https://github.com/eliberty/NetpingCordovaSDK.git"
   },
   "keywords": [
     "cordova",
@@ -29,7 +29,7 @@
   "author": "e-Liberty",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/lmeliberty/NetpingCordovaSDK/issues"
+    "url": "https://github.com/eliberty/NetpingCordovaSDK/issues"
   },
-  "homepage": "https://github.com/lmeliberty/NetpingCordovaSDK#readme"
+  "homepage": "https://github.com/eliberty/NetpingCordovaSDK#readme"
 }

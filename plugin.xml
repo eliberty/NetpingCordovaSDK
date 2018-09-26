@@ -29,7 +29,8 @@
         </feature>
     </config-file>
 
-    <source-file src="src/android/CordovaNepting.java" target-dir="src/com/eliberty/cordova/plugin/nepting/" />        
+    <source-file src="src/android/CordovaNepting.java" target-dir="src/com/eliberty/cordova/plugin/nepting/" />
+    <source-file src="nepting_allpos-2.0.4-REV6810.jar" target-dir="src/com/eliberty/cordova/plugin/nepting/" />
     <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
   </platform>
 </plugin>

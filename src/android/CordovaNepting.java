@@ -16,10 +16,13 @@ import com.getsentry.raven.RavenFactory;
  * @author lmenu@eliberty.fr
  *
  */
-public class CordovaNpeting extends CordovaPlugin
+public class CordovaNepting extends CordovaPlugin
 {    
     private static final String SENTRY_DSN = "XXXXX";
-    private static final String START_ACTIVITY = "startActivity";    
+    private static final String START_ACTIVITY = "startActivity";
+    private static final String TOUCH_INIT_MPOS_IN_ERROR = "TOUCH_INIT_MPOS_IN_ERROR";
+    private static final String TOUCH_SDK_NOT_READY = "TOUCH_SDK_NOT_READY";
+    private static final String TOUCH_TRANSACTION_MPOS_IN_ERROR = "TOUCH_TRANSACTION_MPOS_IN_ERROR";
     private CallbackContext callbackContext = null;
     private String orderId;
     private static final String PAYMENT_MODE_PRODUCTION = "PRODUCTION";

@@ -1,0 +1,30 @@
+{
+  "name": "CordovaNepting",
+  "version": "1.0.0",
+  "description": "Nepting SDK for Cordova",
+  "cordova": {
+    "id": "com.eliberty.cordova.plugin.nepting",
+    "platforms": [
+      "android"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eliberty/NetpingCordovaSDK.git"
+  },
+  "keywords": [
+    "cordova",    
+  ],  
+  "author": "e-Liberty",
+  "license": "MIT",
+  "engines": {
+    "cordovaDependencies": {
+      "2.0.0": {
+        "cordova": ">100"
+      }
+    }
+  },
+  "devDependencies": {
+    "jshint": "^2.6.0"
+  }
+}

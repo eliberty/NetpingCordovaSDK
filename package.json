@@ -1,6 +1,6 @@
 {
   "name": "com.eliberty.cordova.plugin.nepting",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nepting SDK for Cordova",
   "cordova": {
     "id": "com.eliberty.cordova.plugin.nepting",

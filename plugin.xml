@@ -12,7 +12,7 @@
   <repo>https://github.com/eliberty/NetpingCordovaSDK.git</repo>
 
   <engines>
-    <engine name="cordova" version=">=7.0.0"/>
+    <engine name="cordova" version=">=6.3.0"/>
   </engines>
 
   <asset src="www/cordova-nepting.js" target="js/cordova-nepting.js"/>  

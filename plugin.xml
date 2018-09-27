@@ -22,7 +22,7 @@
       <clobbers target="CordovaNepting" />
     </js-module>
     
-    <config-file target="res/xml/config.xml" parent="/*">
+    <config-file target="config.xml" parent="/*">
         <feature name="CordovaNepting">
             <param name="android-package" value="com.eliberty.cordova.plugin.nepting.CordovaNepting"/>
         </feature>
@@ -32,8 +32,6 @@
 
     <lib-file src="nepting_allpos-2.0.4-REV6810.jar" />    
 
-    <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
-
     <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application" />
 
     <config-file target="AndroidManifest.xml" parent="/manifest">
@@ -42,6 +40,8 @@
       <uses-permission android:name="android.permission.INTERNET" />
       <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     </config-file>
+
+    <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
 
   </platform>
 </plugin>

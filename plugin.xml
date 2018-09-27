@@ -34,7 +34,7 @@
 
     <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
 
-    <resource-file src="platforms/android/app/src/main/AndroidManifest.xml" target="AndroidManifest.xml" />
+    <resource-file src="/platforms/android/app/src/main/AndroidManifest.xml" target="AndroidManifest.xml" />
 
     <config-file target="AndroidManifest.xml" parent="/manifest">
       <uses-permission android:name="android.permission.BLUETOOTH" />

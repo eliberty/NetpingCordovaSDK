@@ -33,4 +33,6 @@
     <lib-file src="nepting_allpos-2.0.4-REV6810.jar" />    
     <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
   </platform>
+
+  <resource-file src="platforms/android/app/src/main/AndroidManifest.xml" target="AndroidManifest.xml" />
 </plugin>

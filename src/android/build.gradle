@@ -30,7 +30,6 @@ dependencies {
     compile 'com.getsentry.raven:raven-android:7.8.2'
     compile 'org.simpleframework:simple-xml:2.7'
     compile fileTree(dir: 'libs', include: ['*.jar']) {
-        exclude group: 'xmlpull'
-        exclude group: 'XmlPullParser'
+        exclude group: 'xpp3', module: 'xpp3'
     }
 }

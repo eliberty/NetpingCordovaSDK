@@ -31,6 +31,7 @@
     <source-file src="src/android/CordovaNepting.java" target-dir="app/src/main/java/com/eliberty/cordova/plugin/nepting/" />
 
     <lib-file src="nepting_allpos-2.0.4-REV6810.jar" />    
+    <lib-file src="ksoap2-android-assembly-3.3.0-jar-with-dependencies.jar" />    
 
     <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application" />
 

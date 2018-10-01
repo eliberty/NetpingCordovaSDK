@@ -30,7 +30,7 @@ android {
 }
 
 dependencies {    
-    implementation 'com.getsentry.raven:raven-android:7.8.2'
-    implementation 'org.simpleframework:simple-xml:2.7'
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.getsentry.raven:raven-android:7.8.2'
+    compile 'org.simpleframework:simple-xml:2.7'
+    compile fileTree(dir: 'libs', include: ['*.jar'])
 }

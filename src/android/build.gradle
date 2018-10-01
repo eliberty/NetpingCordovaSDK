@@ -29,7 +29,9 @@ android {
 dependencies {    
     compile 'com.getsentry.raven:raven-android:7.8.2'
     compile 'org.simpleframework:simple-xml:2.7'
-    compile fileTree(dir: 'libs', include: ['*.jar']) {
-        exclude group: 'xpp3', module: 'xpp3'
-    }
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+configurations {
+    all*.exclude group: 'xpp3', module: 'xpp3'
 }

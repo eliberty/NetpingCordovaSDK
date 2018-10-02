@@ -16,6 +16,7 @@ import com.nepting.common.client.callback.UICallback;
 import com.nepting.common.client.callback.UIRequest;
 import com.nepting.common.client.controller.NepClient;
 import com.nepting.common.client.model.Currency;
+import com.nepting.common.client.model.GlobalStatus;
 import com.nepting.common.client.model.LoadBalancingAlgorithm;
 import com.nepting.common.client.model.LoginRequest;
 import com.nepting.common.client.model.LoginResponse;
@@ -23,10 +24,9 @@ import com.nepting.common.client.model.TerminalInformation;
 import com.nepting.common.client.model.TransactionRequest;
 import com.nepting.common.client.model.TransactionResponse;
 import com.nepting.common.client.model.TransactionType;
-
+import java.security.InvalidParameterException;
 import java.util.Iterator;
 import java.util.logging.Logger;
-
 import io.sentry.Sentry;
 
 /**
@@ -37,18 +37,18 @@ import io.sentry.Sentry;
  */
 public class CordovaNepting extends CordovaPlugin implements UICallback
 {
-    private static final String SENTRY_DSN = "https://6f62ec7de29a4447aae73d2234986ef3:d522f320f965466b949715ec9ffd82f4@sentry.io/142434";
     private static final String START_ACTIVITY = "startActivity";
     private static final String TOUCH_INIT_MPOS_IN_ERROR = "TOUCH_INIT_MPOS_IN_ERROR";
     private static final String MESSAGE = "MESSAGE";
+    private static final String LOGIN_FAILED = "LOGIN_FAILED";
 
     private CallbackContext callbackContext = null;
 
-    private String orderId;
     private Long amount;
-    private String deviceId;
-    private String nepwebUrl;
     private String merchantId;
+    private String nepwebUrl;
+    private String orderId;
+    private String deviceId;
 
     private static Raven raven;
     private NepClient nepClient;
@@ -73,57 +73,86 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext)
     {
-        // Init Sentry
-        if (raven == null) {
-            raven = RavenFactory.ravenInstance(SENTRY_DSN);
-        }
-
         LOG.w("eliberty.cordova.plugin.nepting", "execute Cordova");
         this.callbackContext = callbackContext;
-        final JSONArray finalArgs = args;
 
         if (action.equals(START_ACTIVITY)) {
             LOG.w("eliberty.cordova.plugin.nepting", "START_ACTIVITY");
-            cordova.getActivity().runOnUiThread(new Runnable() {
-                public void run() {
-                    try {
-                        JSONObject obj = finalArgs.getJSONObject(0);
-                        orderId = obj.has("orderId") ? obj.getString("orderId") : null;
-                        deviceId = obj.has("deviceId") ? obj.getString("deviceId") : "";
-                        amount = Long.parseLong(obj.has("amount") ? obj.getString("amount") : "0");
-                        nepwebUrl = obj.has("nepwebUrl") ? obj.getString("nepwebUrl") : "";
-                        merchantId = obj.has("merchantId") ? obj.getString("merchantId") : "";
 
-                        Sentry.getContext().addExtra("deviceId", deviceId);
-                        Sentry.getContext().addExtra("orderId", orderId);
-                        Sentry.getContext().addExtra("params", obj);
-
-                        startNeptingSDK();
-                    }
-                    catch (JSONException ex) {
-                        LOG.w("eliberty.cordova.plugin.nepting", "JSONException: " + ex.getMessage());
-                        raven.sendException(ex);
-                    }
-                    catch (Exception e) {
-                        LOG.w("eliberty.cordova.plugin.nepting", "Nepting fail", e);
-                        raven.sendException(e);
-                        runCallbackError(TOUCH_INIT_MPOS_IN_ERROR, e.getMessage());
-                    }
-                }
-            });
+            Runnable task = getTask(args);
+            cordova.getActivity().runOnUiThread(task);
         }
 
         return true;
     }
 
     /**
-     * Launch Nepting SDK
+     * Return a runnable task
+     *
+     * @param finalArgs JSONArray
+     * @return Runnable
+     */
+    private Runnable getTask(JSONArray finalArgs) {
+        return () -> {
+            try {
+                JSONObject obj = finalArgs.getJSONObject(0);
+
+                if (!obj.has("amount")) {
+                    throw new InvalidParameterException("amount parameter was empty");
+                }
+
+                if (!obj.has("orderId")) {
+                    throw new InvalidParameterException("orderId parameter was empty");
+                }
+
+                if (!obj.has("deviceId")) {
+                    throw new InvalidParameterException("deviceId parameter was empty");
+                }
+
+                if (!obj.has("nepwebUrl")) {
+                    throw new InvalidParameterException("nepwebUrl parameter was empty");
+                }
+
+                if (!obj.has("merchantId")) {
+                    throw new InvalidParameterException("merchantId parameter was empty");
+                }
+
+                if (!obj.has("sentryDsn")) {
+                    throw new InvalidParameterException("sentryDsn parameter was empty");
+                }
+
+                orderId = obj.getString("orderId");
+                deviceId = obj.getString("deviceId");
+                amount = obj.getLong("amount");
+                nepwebUrl = obj.getString("nepwebUrl");
+                merchantId = obj.getString("merchantId");
+                String sentryDsn = obj.getString("sentryDsn");
+                // "https://e1e4e8e5a60d4509af59260b42b569c8@sentry.io/1292537";
+
+                // Init Sentry
+                raven = RavenFactory.ravenInstance(sentryDsn);
+
+                Sentry.getContext().addExtra("deviceId", deviceId);
+                Sentry.getContext().addExtra("orderId", orderId);
+                Sentry.getContext().addExtra("params", obj);
+
+                startNeptingSDK();
+            }
+            catch (Exception e) {
+                LOG.w("eliberty.cordova.plugin.nepting", "Nepting fail", e);
+                raven.sendException(e);
+                runCallbackError(TOUCH_INIT_MPOS_IN_ERROR, e.getMessage());
+            }
+        };
+    }
+
+    /**
+     * start Nepting SDK
      */
     private void startNeptingSDK()
     {
         Context ctx = cordova.getActivity().getApplicationContext();
 
-        // Init SDK must done only once
         nepClient = new AllPosClient(this, logger, ctx, false);
         String[] nepWebUrlList = { nepwebUrl };
 
@@ -149,27 +178,28 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
             obj.put("code", code);
             obj.put("message", message);
 
-            synchronized(callbackContext){
-                callbackContext.error(obj);
-                callbackContext.notify();
-            }
+            PluginResult result = new PluginResult(PluginResult.Status.ERROR, obj);
+            result.setKeepCallback(true);
+            callbackContext.sendPluginResult(result);
         }
         catch (JSONException jse) {
             raven.sendException(jse);
             LOG.w("eliberty.cordova.plugin.nepting", "JSONException : " + jse.getMessage());
+            runCallbackError(TOUCH_INIT_MPOS_IN_ERROR, jse.getMessage());
         }
         catch (Exception ex) {
             LOG.w("eliberty.cordova.plugin.nepting", "Exception", ex);
             raven.sendException(ex);
+            runCallbackError(TOUCH_INIT_MPOS_IN_ERROR, ex.getMessage());
         }
     }
 
     /**
-     * Return a Json object for the cordova's callback in case of mpos error
+     * Return a Json object for the cordova's callback in case of mpos success
      *
-     * @param code
-     * @param message
-     * @param params
+     * @param code String
+     * @param message String
+     * @param params JSONObject
      */
     private void runCallbackSuccess(String code, String message, JSONObject params)
     {
@@ -199,6 +229,13 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
         }
     }
 
+    /**
+     * Static method who return a merge JSONObject from more JSONObject
+     *
+     * @param jsonObjects JSONObject...
+     * @return JSONObject
+     * @throws JSONException JSONException
+     */
     private static JSONObject merge(JSONObject... jsonObjects) throws JSONException {
 
         JSONObject jsonObject = new JSONObject();
@@ -215,8 +252,9 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     }
 
     /**
+     * This method is called by the client once a transaction has been completed (successfully or not)
      *
-     * @param transactionResponse
+     * @param transactionResponse TransactionResponse
      */
     @Override
     public void transactionEnded(TransactionResponse transactionResponse) {
@@ -225,56 +263,58 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
         try {
             JSONObject params = new JSONObject();
 
-            if (transactionResponse != null) {
-                if (transactionResponse.getGlobalStatus().equalsIgnoreCase("success")) {
-                    params.put("transactionId", transactionResponse.getAuthorizationNumber());
-                    params.put("transactionUuId", transactionResponse.getAuthorizationCode());
-                    params.put("receipt", transactionResponse.getCustomerTicket());
-                    params.put("transactionDate", transactionResponse.getDateTime());
+            if (transactionResponse.getGlobalStatus().equalsIgnoreCase(GlobalStatus.SUCCESS.toString())) {
+                params.put("transactionId", transactionResponse.getMerchantTransactionId());
+                params.put("authorizationId", transactionResponse.getAuthorizationCode() + "_" + transactionResponse.getAuthorizationNumber());
+                params.put("receipt", transactionResponse.getCustomerTicket());
+                params.put("transactionDate", transactionResponse.getDateTime());
+            }
 
-                    LOG.w("eliberty.cordova.plugin.nepting", "transactionEnded params : " + params.toString());
+            LOG.w("eliberty.cordova.plugin.nepting", "transactionEnded params : " + params.toString());
+            runCallbackSuccess(transactionResponse.getGlobalStatus().toUpperCase(), "", params);
 
-                    runCallbackSuccess(transactionResponse.getGlobalStatus().toUpperCase(), "", params);
-
-                } else {
-                    runCallbackSuccess(transactionResponse.getGlobalStatus().toUpperCase(), "", params);
-                }
-
-                if (nepClient != null) {
-                    nepClient.logoff();
-                    nepClient.interrupt();
-                }
+            if (nepClient != null) {
+                nepClient.logoff();
+                nepClient.interrupt();
             }
         }
         catch (JSONException ex) {
-
+            LOG.w("eliberty.cordova.plugin.nepting", "JSONException: " + ex.getMessage());
+            raven.sendException(ex);
+            runCallbackError(Integer.toString(ex.hashCode()), ex.getMessage());
         }
     }
 
     /**
+     * This method is called by the client once login phase has been completed (successfully or not)
      *
-     * @param loginResponse
+     * @param loginResponse LoginResponse
      */
     @Override
     public void loginEnded(LoginResponse loginResponse) {
         LOG.w("eliberty.cordova.plugin.nepting", "loginEnded : " + loginResponse.toString());
-        if (loginResponse.getGlobalStatus().toString().equalsIgnoreCase("success"))
+
+        if (loginResponse.isSuccessful())
         {
             LOG.w("eliberty.cordova.plugin.nepting", "loginEnded success");
             // Process Transaction
             Currency defaultCurrency = new Currency("EUR", 2, 978);
             TransactionType transactionType = TransactionType.DEBIT;
             TransactionRequest transactionRequest = new TransactionRequest(transactionType, amount, defaultCurrency, false, Long.toString(System.currentTimeMillis()));
+            transactionRequest.setPrivateData("orderID:" + orderId + "&deviveID:" + deviceId);
             nepClient.startTransaction(transactionRequest);
         } else {
             LOG.w("eliberty.cordova.plugin.nepting", "loginEnded failed : " + loginResponse.getGlobalStatus().toString());
             // Display error message
+            runCallbackSuccess(LOGIN_FAILED, "", new JSONObject());
         }
     }
 
     /**
+     * This method is called by the client once the fetchLocalTransactionList method ended (successfully or not).
+     * Not implemented by e-Libyerty
      *
-     * @param integer
+     * @param integer int
      */
     @Override
     public void fetchLocalTransactionListEnded(int integer) {
@@ -282,8 +322,10 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     }
 
     /**
+     * This method is called by the client once the getTerminalInformation method ended (successfully or not).
+     * Not implemented by e-Libyerty
      *
-     * @param terminalInformation
+     * @param terminalInformation TerminalInformation
      */
     @Override
     public void getTerminalInformationEnded(TerminalInformation terminalInformation) {
@@ -291,9 +333,20 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     }
 
     /**
+     * This method is used to call a UI Request:
+     * - display a text (MESSAGE mode)
+     * - display a question and 1 or 2 buttons (QUESTION interactive mode)
+     * - display a menu (MENU interactive mode)
+     * - display a text, edit a text and 2 buttons (KEYS ENTRY interactive mode)
      *
-     * @param uiRequest
-     * @return
+     * Possible results for interactive modes are:
+     * - timeout - null string (in all interactive modes)
+     * - clicked button label (in QUESTION mode)
+     * - selected menu item (in MENU mode)
+     * - clicked button label and typed text - separated by a semicolon (in KEYS ENTRY mode)
+     *
+     * @param uiRequest UIRequest
+     * @return String
      */
     @Override
     public String postUIRequest(UIRequest uiRequest) {

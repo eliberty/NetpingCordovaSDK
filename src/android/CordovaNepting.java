@@ -127,7 +127,6 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
                 nepwebUrl = obj.getString("nepwebUrl");
                 merchantId = obj.getString("merchantId");
                 String sentryDsn = obj.getString("sentryDsn");
-                // "https://e1e4e8e5a60d4509af59260b42b569c8@sentry.io/1292537";
 
                 // Init Sentry
                 raven = RavenFactory.ravenInstance(sentryDsn);
@@ -140,7 +139,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
             }
             catch (Exception e) {
                 LOG.w("eliberty.cordova.plugin.nepting", "Nepting fail", e);
-                raven.sendException(e);
+                if (raven != null) raven.sendException(e);
                 runCallbackError(TOUCH_INIT_MPOS_IN_ERROR, e.getMessage());
             }
         };

@@ -127,6 +127,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
                 nepwebUrl = obj.getString("nepwebUrl");
                 merchantId = obj.getString("merchantId");
                 String sentryDsn = obj.getString("sentryDsn");
+                LOG.w("eliberty.cordova.plugin.nepting", "sentryDsn : " + sentryDsn);
 
                 // Init Sentry
                 raven = RavenFactory.ravenInstance(sentryDsn);

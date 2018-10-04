@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"    
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    id="com.eliberty.cordova.plugin.nepting"
-    version="1.0.1">  
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="com.eliberty.cordova.plugin.nepting"
+        version="1.0.1">
 
   <name>CordovaNepting</name>
   <description>Nepting SDK for Cordova</description>
@@ -15,34 +15,50 @@
     <engine name="cordova" version=">=6.3.0"/>
   </engines>
 
-  <asset src="www/cordova-nepting.js" target="js/cordova-nepting.js"/>  
+  <asset src="www/cordova-nepting.js" target="js/cordova-nepting.js"/>
 
   <platform name="android">
     <js-module src="www/cordova-nepting.js" name="CordovaNepting">
       <clobbers target="CordovaNepting" />
     </js-module>
-    
+
     <config-file target="config.xml" parent="/*">
-        <feature name="CordovaNepting">
-            <param name="android-package" value="com.eliberty.cordova.plugin.nepting.CordovaNepting"/>
-        </feature>
+      <feature name="CordovaNepting">
+        <param name="android-package" value="com.eliberty.cordova.plugin.nepting.CordovaNepting"/>
+      </feature>
     </config-file>
 
     <source-file src="src/android/CordovaNepting.java" target-dir="app/src/main/java/com/eliberty/cordova/plugin/nepting/" />
 
-    <lib-file src="nepting_allpos-2.0.4-REV6810.jar" />    
-    <lib-file src="ksoap2-android-assembly-3.3.0-jar-with-dependencies.jar" />    
+    <lib-file src="nepting_allpos-2.0.4-REV6810.jar" />
+    <lib-file src="ksoap2-android-assembly-3.3.0-jar-with-dependencies.jar" />
 
     <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application" />
 
     <config-file target="AndroidManifest.xml" parent="/manifest">
+      <uses-feature android:name="android.hardware.usb.host" android:required="true" />
       <uses-permission android:name="android.permission.BLUETOOTH" />
       <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
       <uses-permission android:name="android.permission.INTERNET" />
       <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+      <uses-permission android:name="android.permission.MANAGE_USB" />
+      <uses-permission android:name="android.permission.USB_PERMISSION" />
+    </config-file>
+
+    <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
+      <meta-data  android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" android:resource="@xml/device_filter" />
+      <meta-data  android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" android:resource="@xml/device_filter" />
+    </config-file>
+
+    <config-file target="AndroidManifest.xml" parent="/manifest/application/activity/intent-filter">
+      <action android:name="android.hardware.usb.action.USB_STATE" />
+      <action android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" />
+      <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
     </config-file>
 
     <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
+
+    <resource-file src="device_filter.xml" target="res/xml/device_filter.xml" />
 
   </platform>
 </plugin>

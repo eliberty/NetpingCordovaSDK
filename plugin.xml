@@ -22,11 +22,11 @@
       <clobbers target="CordovaNepting" />
     </js-module>
 
-    <config-file target="config.xml" parent="/*">
+   <!--  <config-file target="config.xml" parent="/*">
       <feature name="CordovaNepting">
         <param name="android-package" value="com.eliberty.cordova.plugin.nepting.CordovaNepting"/>
       </feature>
-    </config-file>
+    </config-file> -->
 
     <source-file src="src/android/CordovaNepting.java" target-dir="app/src/main/java/com/eliberty/cordova/plugin/nepting/" />
 

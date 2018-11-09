@@ -47,7 +47,7 @@
       <uses-feature android:name="android.hardware.usb.host" android:required="true" />
     </config-file>
 
-    <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
+    <!-- <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
       <meta-data  android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" android:resource="@xml/device_filter" />
       <meta-data  android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" android:resource="@xml/device_filter" />
     </config-file>
@@ -56,7 +56,7 @@
       <action android:name="android.hardware.usb.action.USB_STATE" />
       <action android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" />
       <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-    </config-file>
+    </config-file> -->
 
     <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
 

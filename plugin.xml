@@ -35,7 +35,7 @@
 
     <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application" />
 
-    <config-file target="AndroidManifest.xml" parent="/manifest">
+    <!-- <config-file target="AndroidManifest.xml" parent="/manifest">
       <uses-permission android:name="android.permission.BLUETOOTH" />
       <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
       <uses-permission android:name="android.permission.INTERNET" />
@@ -45,7 +45,7 @@
       <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
       <uses-permission android:name="android.permission.WAKE_LOCK" />
       <uses-feature android:name="android.hardware.usb.host" android:required="true" />
-    </config-file>
+    </config-file> -->
 
     <!-- <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
       <meta-data  android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" android:resource="@xml/device_filter" />

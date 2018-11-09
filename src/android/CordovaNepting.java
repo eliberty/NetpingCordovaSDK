@@ -1,6 +1,8 @@
 package com.eliberty.cordova.plugin.nepting;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.view.WindowManager.LayoutParams;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -12,6 +14,7 @@ import org.json.JSONObject;
 import com.getsentry.raven.Raven;
 import com.getsentry.raven.RavenFactory;
 import com.nepting.allpos.controller.AllPosClient;
+import com.nepting.common.client.callback.ActionType;
 import com.nepting.common.client.callback.UICallback;
 import com.nepting.common.client.callback.UIRequest;
 import com.nepting.common.client.controller.NepClient;
@@ -41,6 +44,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     private static final String MESSAGE = "MESSAGE";
     private static final String LOGIN_FAILED = "LOGIN_FAILED";
 
+
     private CallbackContext callbackContext = null;
 
     private Long amount;
@@ -52,6 +56,8 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     private static Raven raven;
     private NepClient nepClient;
     public Logger logger;
+    public Integer timer = 2500;
+    public String actionResult = null;
 
     /**
      * Executes the request.
@@ -72,6 +78,8 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext)
     {
+
+
         LOG.w("eliberty.cordova.plugin.nepting", "execute Cordova");
         this.callbackContext = callbackContext;
 
@@ -261,12 +269,10 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
         try {
             JSONObject params = new JSONObject();
 
-//            if (transactionResponse.getGlobalStatus().equalsIgnoreCase(GlobalStatus.SUCCESS.toString())) {
             params.put("transactionId", transactionResponse.getMerchantTransactionId());
             params.put("authorizationId", transactionResponse.getAuthorizationCode() + "_" + transactionResponse.getAuthorizationNumber());
             params.put("receipt", transactionResponse.getCustomerTicket());
             params.put("transactionDate", transactionResponse.getDateTime());
-//            }
 
             LOG.w("eliberty.cordova.plugin.nepting", "transactionEnded params : " + params.toString());
             runCallbackSuccess(transactionResponse.getGlobalStatus().toUpperCase(), "", params);
@@ -353,8 +359,62 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
      */
     @Override
     public String postUIRequest(UIRequest uiRequest) {
-        LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest : " + uiRequest.toString());
-        runCallbackSuccess(MESSAGE, uiRequest.getMessage(), new JSONObject());
-        return uiRequest.toString();
+        LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest : " + uiRequest.getActionType() + " message : " + uiRequest.getMessage());
+
+        if (uiRequest.getActionType().equals(ActionType.MESSAGE)) {
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 1 TYPE: " + uiRequest.getActionType() + " message : " + uiRequest.getMessage());
+            runCallbackSuccess(MESSAGE, uiRequest.getMessage(), new JSONObject());
+            return uiRequest.toString();
+        } else {
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 2 TYPE: " + uiRequest.getActionType() + " message : " + uiRequest.getMessage());
+
+            runCallbackSuccess(MESSAGE, uiRequest.getMessage(), new JSONObject());
+
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                public void run() {
+                    AlertDialog.Builder alert = new AlertDialog.Builder(cordova.getActivity());
+
+                    alert.setTitle(uiRequest.getActionType().toString());
+                    alert.setMessage(uiRequest.getMessage());
+                    alert.setPositiveButton(uiRequest.getLabelList()[0], new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            runCallbackSuccess(MESSAGE, uiRequest.getLabelList()[0], new JSONObject());
+
+                            dialog.dismiss();
+                            actionResult = uiRequest.getLabelList()[0];
+                        }
+                    });
+
+                    alert.setNegativeButton(uiRequest.getLabelList()[1], new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            runCallbackSuccess(MESSAGE, uiRequest.getLabelList()[1], new JSONObject());
+
+                            dialog.dismiss();
+                            actionResult = uiRequest.getLabelList()[1];
+                        }
+                    });
+
+                    LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest before AlertDialog show");
+
+                    AlertDialog dialog = alert.show();
+                    cordova.getActivity().getWindow().addFlags(LayoutParams.TYPE_SYSTEM_ALERT);
+                }
+            });
+
+            while (timer > 0 && actionResult == null) {
+                LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest iteration");
+                timer--;
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest InterruptedException" + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+
+            return actionResult;
+        }
     }
 }

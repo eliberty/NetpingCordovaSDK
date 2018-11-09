@@ -36,13 +36,15 @@
     <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application" />
 
     <config-file target="AndroidManifest.xml" parent="/manifest">
-      <uses-feature android:name="android.hardware.usb.host" android:required="true" />
       <uses-permission android:name="android.permission.BLUETOOTH" />
       <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
       <uses-permission android:name="android.permission.INTERNET" />
       <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-      <uses-permission android:name="android.permission.MANAGE_USB" />
       <uses-permission android:name="android.permission.USB_PERMISSION" />
+      <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+      <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+      <uses-permission android:name="android.permission.WAKE_LOCK" />
+      <uses-feature android:name="android.hardware.usb.host" android:required="true" />
     </config-file>
 
     <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">

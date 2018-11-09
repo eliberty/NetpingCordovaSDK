@@ -1,7 +1,7 @@
 package com.eliberty.cordova.plugin.nepting;
 
 import android.content.Context;
-import android.view.WindowManager;
+import android.view.WindowManager.LayoutParams;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
@@ -16,7 +16,6 @@ import com.nepting.common.client.callback.UICallback;
 import com.nepting.common.client.callback.UIRequest;
 import com.nepting.common.client.controller.NepClient;
 import com.nepting.common.client.model.Currency;
-import com.nepting.common.client.model.GlobalStatus;
 import com.nepting.common.client.model.LoadBalancingAlgorithm;
 import com.nepting.common.client.model.LoginRequest;
 import com.nepting.common.client.model.LoginResponse;
@@ -80,6 +79,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
             LOG.w("eliberty.cordova.plugin.nepting", "START_ACTIVITY");
 
             Runnable task = getTask(args);
+
             cordova.getActivity().runOnUiThread(task);
         }
 
@@ -95,6 +95,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     private Runnable getTask(JSONArray finalArgs) {
         return () -> {
             try {
+                cordova.getActivity().getWindow().addFlags(LayoutParams.FLAG_KEEP_SCREEN_ON);
                 JSONObject obj = finalArgs.getJSONObject(0);
 
                 if (!obj.has("amount")) {
@@ -127,7 +128,6 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
                 nepwebUrl = obj.getString("nepwebUrl");
                 merchantId = obj.getString("merchantId");
                 String sentryDsn = obj.getString("sentryDsn");
-                LOG.w("eliberty.cordova.plugin.nepting", "sentryDsn : " + sentryDsn);
 
                 // Init Sentry
                 raven = RavenFactory.ravenInstance(sentryDsn);
@@ -157,8 +157,6 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
         String[] nepWebUrlList = { nepwebUrl };
 
         LoginRequest request = new LoginRequest(merchantId, nepWebUrlList, LoadBalancingAlgorithm.FIRST_ALIVE, null);
-
-        cordova.getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         LOG.w("eliberty.cordova.plugin.nepting", "nepClient.login : " + request.toString());
         nepClient.login(request);
@@ -263,12 +261,12 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
         try {
             JSONObject params = new JSONObject();
 
-            if (transactionResponse.getGlobalStatus().equalsIgnoreCase(GlobalStatus.SUCCESS.toString())) {
-                params.put("transactionId", transactionResponse.getMerchantTransactionId());
-                params.put("authorizationId", transactionResponse.getAuthorizationCode() + "_" + transactionResponse.getAuthorizationNumber());
-                params.put("receipt", transactionResponse.getCustomerTicket());
-                params.put("transactionDate", transactionResponse.getDateTime());
-            }
+//            if (transactionResponse.getGlobalStatus().equalsIgnoreCase(GlobalStatus.SUCCESS.toString())) {
+            params.put("transactionId", transactionResponse.getMerchantTransactionId());
+            params.put("authorizationId", transactionResponse.getAuthorizationCode() + "_" + transactionResponse.getAuthorizationNumber());
+            params.put("receipt", transactionResponse.getCustomerTicket());
+            params.put("transactionDate", transactionResponse.getDateTime());
+//            }
 
             LOG.w("eliberty.cordova.plugin.nepting", "transactionEnded params : " + params.toString());
             runCallbackSuccess(transactionResponse.getGlobalStatus().toUpperCase(), "", params);
@@ -282,6 +280,11 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
             LOG.w("eliberty.cordova.plugin.nepting", "JSONException: " + ex.getMessage());
             raven.sendException(ex);
             runCallbackError(Integer.toString(ex.hashCode()), ex.getMessage());
+        }
+        catch (Exception e) {
+            LOG.w("eliberty.cordova.plugin.nepting", "Exception: " + e.getMessage());
+            raven.sendException(e);
+            runCallbackError(Integer.toString(e.hashCode()), e.getMessage());
         }
     }
 

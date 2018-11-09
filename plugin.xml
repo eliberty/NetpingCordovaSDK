@@ -60,7 +60,7 @@
 
     <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
 
-    <resource-file src="device_filter.xml" target="res/xml/device_filter.xml" />
+    <!-- <resource-file src="device_filter.xml" target="res/xml/device_filter.xml" /> -->
 
   </platform>
 </plugin>

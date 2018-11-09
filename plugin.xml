@@ -18,7 +18,7 @@
   <asset src="www/cordova-nepting.js" target="js/cordova-nepting.js"/>
 
   <platform name="android">
-    <js-module src="www/cordova-nepting.js" name="CordovaNepting">
+    <!-- <js-module src="www/cordova-nepting.js" name="CordovaNepting">
       <clobbers target="CordovaNepting" />
     </js-module>
 
@@ -33,7 +33,7 @@
     <lib-file src="nepting_allpos-2.0.4-REV6810.jar" />
     <lib-file src="ksoap2-android-assembly-3.3.0-jar-with-dependencies.jar" />
 
-    <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application" />
+    <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application" /> -->
 
     <!-- <config-file target="AndroidManifest.xml" parent="/manifest">
       <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -58,7 +58,7 @@
       <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
     </config-file> -->
 
-    <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
+    <!-- <framework src="src/android/build.gradle" custom="true" type="gradleReference" /> -->
 
     <!-- <resource-file src="device_filter.xml" target="res/xml/device_filter.xml" /> -->
 

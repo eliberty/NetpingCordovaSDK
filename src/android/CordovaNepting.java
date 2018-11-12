@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.view.WindowManager.LayoutParams;
+import android.widget.EditText;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
@@ -44,7 +45,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     private static final String MESSAGE = "MESSAGE";
     private static final String LOGIN_FAILED = "LOGIN_FAILED";
 
-
+    private UIRequest action;
     private CallbackContext callbackContext = null;
 
     private Long amount;
@@ -56,8 +57,11 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
     private static Raven raven;
     private NepClient nepClient;
     public Logger logger;
-    public Integer timer = 2500;
-    public String actionResult = null;
+
+    private String actionResult = null;
+    private AlertDialog matbdf = null;
+    private AlertDialog mdf = null;
+    private AlertDialog kedf = null;
 
     /**
      * Executes the request.
@@ -354,67 +358,190 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
      * - selected menu item (in MENU mode)
      * - clicked button label and typed text - separated by a semicolon (in KEYS ENTRY mode)
      *
-     * @param uiRequest UIRequest
+     * @param action UIRequest
      * @return String
      */
     @Override
-    public String postUIRequest(UIRequest uiRequest) {
-        LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest : " + uiRequest.getActionType() + " message : " + uiRequest.getMessage());
+    public String postUIRequest(UIRequest action) {
+        this.action = action;
+        this.actionResult = null;
+        long timer = action.getTimeoutMs() / 500;
 
-        if (uiRequest.getActionType().equals(ActionType.MESSAGE)) {
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 1 TYPE: " + uiRequest.getActionType() + " message : " + uiRequest.getMessage());
-            runCallbackSuccess(MESSAGE, uiRequest.getMessage(), new JSONObject());
-            return uiRequest.toString();
-        } else {
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 2 TYPE: " + uiRequest.getActionType() + " message : " + uiRequest.getMessage());
+        LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest : " + action.getActionType() + " message : " + action.getMessage());
 
-            runCallbackSuccess(MESSAGE, uiRequest.getMessage(), new JSONObject());
+        if (action.getActionType().equals(ActionType.MESSAGE)) {
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 1 TYPE: " + action.getActionType() + " message : " + action.getMessage());
+            runCallbackSuccess(MESSAGE, action.getMessage(), new JSONObject());
+            return null;
+        }
+        else if (action.getActionType().equals(ActionType.QUESTION)) {
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
 
-            cordova.getActivity().runOnUiThread(new Runnable() {
-                public void run() {
-                    AlertDialog.Builder alert = new AlertDialog.Builder(cordova.getActivity());
+            runCallbackSuccess(MESSAGE, action.getMessage(), new JSONObject());
 
-                    alert.setTitle(uiRequest.getActionType().toString());
-                    alert.setMessage(uiRequest.getMessage());
-                    alert.setPositiveButton(uiRequest.getLabelList()[0], new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            runCallbackSuccess(MESSAGE, uiRequest.getLabelList()[0], new JSONObject());
+            cordova.getActivity().runOnUiThread(getModalQuestion());
+        }
+        else if (action.getActionType().equals(ActionType.KEYS_ENTRY)) {
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
 
-                            dialog.dismiss();
-                            actionResult = uiRequest.getLabelList()[0];
-                        }
-                    });
+            runCallbackSuccess(MESSAGE, action.getMessage(), new JSONObject());
 
-                    alert.setNegativeButton(uiRequest.getLabelList()[1], new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            runCallbackSuccess(MESSAGE, uiRequest.getLabelList()[1], new JSONObject());
+            cordova.getActivity().runOnUiThread(getModalKeysEntry());
+        }
+        else if (action.getActionType().equals(ActionType.MENU)) {
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
 
-                            dialog.dismiss();
-                            actionResult = uiRequest.getLabelList()[1];
-                        }
-                    });
+            runCallbackSuccess(MESSAGE, action.getMessage(), new JSONObject());
 
-                    LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest before AlertDialog show");
+            cordova.getActivity().runOnUiThread(getModalMenu());
+        }
+        else {
+            LOG.w("eliberty.cordova.plugin.nepting", "Unknown action "+action.getActionType());
+            return null;
+        }
 
-                    AlertDialog dialog = alert.show();
-                    cordova.getActivity().getWindow().addFlags(LayoutParams.TYPE_SYSTEM_ALERT);
+        while (timer > 0 && actionResult == null) {
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest iteration");
+            timer--;
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest InterruptedException" + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
+        if (matbdf != null) {
+            matbdf.dismiss();
+        }
+        if (kedf != null) {
+            kedf.dismiss();
+        }
+        if (mdf != null) {
+            mdf.dismiss();
+        }
+
+        if (!action.isAuthenticationNeeded()) {
+            return actionResult;
+        }
+
+        if (action.getActionType() != ActionType.QUESTION) {
+            LOG.w("callUIAction", "Authentication only for question for the moment");
+            return actionResult;
+        }
+
+        // todo: /!\ works with first label
+        if (actionResult == null || !actionResult.contentEquals(action.getLabelList()[0])) {
+            return actionResult;
+        }
+
+        return null;
+    }
+
+
+    /**
+     * Return a runnable task
+     *
+     * @return Runnable
+     */
+    private Runnable getModalQuestion() {
+        return () -> {
+            AlertDialog.Builder alert = new AlertDialog.Builder(cordova.getActivity());
+
+            alert.setTitle(action.getActionType().toString());
+            alert.setMessage(action.getMessage());
+            alert.setPositiveButton(action.getLabelList()[0], new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    runCallbackSuccess(MESSAGE, action.getLabelList()[0], new JSONObject());
+                    actionResult = action.getLabelList()[0];
                 }
             });
 
-            while (timer > 0 && actionResult == null) {
-                LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest iteration");
-                timer--;
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest InterruptedException" + e.getMessage());
-                    e.printStackTrace();
+            alert.setNegativeButton(action.getLabelList()[1], new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    runCallbackSuccess(MESSAGE, action.getLabelList()[1], new JSONObject());
+                    actionResult = action.getLabelList()[1];
                 }
-            }
+            });
 
-            return actionResult;
-        }
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest before AlertDialog show");
+
+            matbdf = alert.show();
+        };
+    }
+
+    /**
+     * Return a runnable task
+     *
+     * @return Runnable
+     */
+    private Runnable getModalKeysEntry() {
+        return () -> {
+            final EditText edittext = new EditText(cordova.getActivity());
+            AlertDialog.Builder alert = new AlertDialog.Builder(cordova.getActivity());
+
+            alert.setTitle(action.getActionType().toString());
+            alert.setMessage(action.getMessage());
+
+//            edittext.setText("33467666363");
+            alert.setView(edittext);
+
+            alert.setPositiveButton(action.getLabelList()[0], new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    String editTextValue = edittext.getText().toString();
+                    String concat = action.getLabelList()[0];
+                    concat = concat + ";" + editTextValue;
+                    actionResult = concat;
+                    runCallbackSuccess(MESSAGE, concat, new JSONObject());
+                }
+            });
+
+            alert.setNegativeButton(action.getLabelList()[1], new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    String editTextValue = edittext.getText().toString();
+                    String concat = action.getLabelList()[0];
+                    concat = concat + ";" + editTextValue;
+                    actionResult = concat;
+                    runCallbackSuccess(MESSAGE, concat, new JSONObject());
+                }
+            });
+
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest before AlertDialog show");
+
+            kedf = alert.show();
+        };
+    }
+
+    /**
+     *
+     * @return
+     */
+    private Runnable getModalMenu() {
+        return () -> {
+            AlertDialog.Builder alert = new AlertDialog.Builder(cordova.getActivity());
+            alert.setTitle(action.getActionType().toString());
+            alert.setMessage(action.getMessage());
+
+            alert.setItems(action.getLabelList(), new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    // The 'which' argument contains the index position of the selected item
+                    actionResult = action.getLabelList()[which];
+                    runCallbackSuccess(MESSAGE, actionResult, new JSONObject());
+                    dialog.dismiss();
+                }
+            });
+
+            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest before AlertDialog show");
+
+            mdf = alert.show();
+        };
     }
 }

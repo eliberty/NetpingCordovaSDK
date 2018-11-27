@@ -315,6 +315,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback
             TransactionType transactionType = TransactionType.DEBIT;
             TransactionRequest transactionRequest = new TransactionRequest(transactionType, amount, defaultCurrency, false, Long.toString(System.currentTimeMillis()));
             transactionRequest.setPrivateData("orderID:" + orderId + "&deviveID:" + deviceId);
+            transactionRequest.setMerchantTransactionId(orderId);
             nepClient.startTransaction(transactionRequest);
         } else {
             LOG.w("eliberty.cordova.plugin.nepting", "loginEnded failed : " + loginResponse.getGlobalStatus().toString());

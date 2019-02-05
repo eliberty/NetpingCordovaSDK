@@ -3,7 +3,7 @@ repositories {
         url 'http://bright.github.io/maven-repo'
     }    
 }
-c
+
 android {
     compileSdkVersion 25
     buildToolsVersion "25.1.1"

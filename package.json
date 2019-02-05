@@ -1,17 +1,47 @@
 {
-  "name": "com.eliberty.cordova.plugin.nepting",
-  "version": "1.0.1",
-  "description": "Nepting SDK for Cordova",
+  "_from": "git+https://github.com/eliberty/NetpingCordovaSDK.git",
+  "_id": "com.eliberty.cordova.plugin.nepting@1.0.1",
+  "_inBundle": false,
+  "_integrity": "",
+  "_location": "/com.eliberty.cordova.plugin.nepting",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "git",
+    "raw": "https://github.com/eliberty/NetpingCordovaSDK.git",
+    "rawSpec": "https://github.com/eliberty/NetpingCordovaSDK.git",
+    "saveSpec": "git+https://github.com/eliberty/NetpingCordovaSDK.git",
+    "fetchSpec": "https://github.com/eliberty/NetpingCordovaSDK.git",
+    "gitCommittish": null
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "git+https://github.com/eliberty/NetpingCordovaSDK.git#72b6cbabf00e18d50d48e2d17ff1b99edc49ac77",
+  "_spec": "https://github.com/eliberty/NetpingCordovaSDK.git",
+  "_where": "/Users/ludovic/Workspace/javascript/touch-react/TouchV2",
+  "author": {
+    "name": "e-Liberty"
+  },
+  "bugs": {
+    "url": "https://github.com/eliberty/NetpingCordovaSDK/issues"
+  },
+  "bundleDependencies": false,
   "cordova": {
     "id": "com.eliberty.cordova.plugin.nepting",
     "platforms": [
       "android"
     ]
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/eliberty/NetpingCordovaSDK.git"
-  },
+  "deprecated": false,
+  "description": "Nepting SDK for Cordova",
+  "engines": [
+    {
+      "name": "cordova",
+      "version": ">=6.3.0"
+    }
+  ],
+  "homepage": "https://github.com/eliberty/NetpingCordovaSDK#readme",
   "keywords": [
     "cordova",
     "nepting",
@@ -20,16 +50,11 @@
     "ecosystem:cordova",
     "cordova-android"
   ],
-  "engines": [
-    {
-      "name": "cordova",
-      "version": ">=6.3.0"
-    }
-  ],
-  "author": "e-Liberty",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/eliberty/NetpingCordovaSDK/issues"
+  "name": "com.eliberty.cordova.plugin.nepting",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eliberty/NetpingCordovaSDK.git"
   },
-  "homepage": "https://github.com/eliberty/NetpingCordovaSDK#readme"
+  "version": "1.0.1"
 }

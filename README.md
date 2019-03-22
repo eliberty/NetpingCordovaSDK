@@ -19,7 +19,7 @@ const params = {
   nepwebUrl: '' // URL Nepting
   merchantId: 1265456464, // Merchant ID
   sentryDsn: 'https://XX:XX@sentry.io/XX', // URL sentry to log
-  deviceId: qsdfqsd4f6q5s4df, // Android Id
+  deviceId: 'qsdfqsd4f6q5s4df', // Android Id
 };
 
 const failedCallbackFunction = (data) => {

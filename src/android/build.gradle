@@ -1,7 +1,7 @@
 repositories {    
     maven {
         url 'http://bright.github.io/maven-repo'
-    }    
+    }
 }
 
 android {
@@ -26,10 +26,10 @@ android {
     }
 }
 
-dependencies {    
-    compile 'io.sentry:sentry-android:1.6.8'
-    compile 'org.simpleframework:simple-xml:2.7'
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+dependencies {
+    implementation 'io.sentry:sentry-android:1.6.8'
+    implementation 'org.simpleframework:simple-xml:2.7'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
 
 configurations {

@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Spire SPM20 -->
     <usb-device vendor-id="7531" product-id="260" />
+
+    <!-- Spire SPp30 1 -->
+    <usb-device vendor-id="1504" product-id="4608" />
+
+    <!-- Spire SPp30 2 -->
+    <usb-device vendor-id="10355" product-id="12337" />
+
+    <!-- Pax S300 -->
+    <usb-device vendor-id="4660" product-id="257" />
+
+    <!-- Pax Q20 -->
+    <usb-device vendor-id="4660" product-id="8549" />
+
+    <!-- Pax Q20 on E700 with POSVCOM New ID -->
+    <usb-device vendor-id="12216" product-id="4353" />
 </resources>

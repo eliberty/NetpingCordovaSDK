@@ -8,7 +8,6 @@ import android.widget.EditText;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -69,6 +68,8 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
     private SentryClient sentry;
     private Context ctx;
     private String dsn;
+    private String terminalIp;
+    private String terminalType;
 
     private NepClient nepClient;
     private Currency defaultCurrency;
@@ -80,7 +81,8 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
 
     private Integer iterateTransactionEnded;
     private Integer iterateLoginEnded;
-    private LoginRequest loginRequest;
+    private LoginRequest loginRequest = null;
+    private Logger logger = Logger.getLogger("CordovaLog");
 
     /**
      * Executes the request.
@@ -99,11 +101,11 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
      */
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
-        LOG.w("eliberty.cordova.plugin.nepting", "execute Cordova");
+        logger.log(Level.INFO, "execute Cordova");
         this.callbackContext = callbackContext;
 
         if (action.equals(START_ACTIVITY)) {
-            LOG.w("eliberty.cordova.plugin.nepting", "START_ACTIVITY");
+            logger.log(Level.INFO, "START_ACTIVITY");
 
             // Init Sentry
             ctx = cordova.getActivity().getApplicationContext();
@@ -124,7 +126,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
     private Runnable initBankTransaction(JSONArray finalArgs) {
         return () -> {
             try {
-                LOG.w("eliberty.cordova.plugin.nepting", "getTask");
+                logger.log(Level.INFO, "initBankTransaction");
 
                 cordova.getActivity().getWindow().addFlags(LayoutParams.FLAG_KEEP_SCREEN_ON);
                 JSONObject obj = finalArgs.getJSONObject(0);
@@ -158,21 +160,24 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
                 amount = obj.getLong("amount");
                 nepwebUrl = obj.getString("nepwebUrl");
                 merchantId = obj.getString("merchantId");
-
                 dsn = obj.getString("sentryDsn");
+                terminalIp = obj.getString("terminalIp");
+                terminalType = obj.getString("terminalType");
 
-                LOG.w("eliberty.cordova.plugin.nepting", "Sentry DSN DSN:" + dsn);
                 sentry = Sentry.init(dsn, new AndroidSentryClientFactory(ctx));
-
                 sentry.getContext().addExtra("deviceId", deviceId);
                 sentry.getContext().addExtra("orderId", orderId);
                 sentry.getContext().addExtra("params", obj);
+                sentry.getContext().addExtra("terminalIp", terminalIp);
+                sentry.getContext().addExtra("terminalType", terminalType);
+                sentry.getContext().addExtra("nepwebUrl", nepwebUrl);
+                sentry.getContext().addExtra("merchantId", merchantId);
 
                 defaultCurrency = new Currency("EUR", 2, 978);
 
                 startNeptingSDK();
             } catch (Exception e) {
-                LOG.w("eliberty.cordova.plugin.nepting", "Nepting fail", e);
+                logger.log(Level.SEVERE,  "Nepting fail", e);
                 this.extractLogToSentry();
                 sentry.sendException(e);
                 runCallbackError(TOUCH_INIT_MPOS_IN_ERROR, e.getMessage());
@@ -181,22 +186,37 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
     }
 
     /**
+     *
+     * @return LoginRequest
+     */
+    private LoginRequest getLoginRequest() {
+        String[] nepWebUrlList = {nepwebUrl};
+
+        if (terminalType.equals("SPm20")) { // USB or Bluetooth
+            logger.log(Level.INFO, "terminal Type SPm20");
+            loginRequest = new LoginRequest(merchantId, nepWebUrlList, LoadBalancingAlgorithm.FIRST_ALIVE, null);
+        }
+
+        if (terminalType.equals("SPp30")) { // IP
+            logger.log(Level.INFO, "terminal Type SPp30");
+            loginRequest = new LoginRequest(merchantId, nepWebUrlList, LoadBalancingAlgorithm.FIRST_ALIVE, terminalIp);
+        }
+
+        if (loginRequest == null) {
+            runCallbackError(TOUCH_INIT_MPOS_IN_ERROR, "The type of terminal is not known");
+        }
+
+        return loginRequest;
+    }
+
+    /**
      * start Nepting SDK
      */
     private void startNeptingSDK() {
         Context ctx = cordova.getActivity().getApplicationContext();
-
-        Logger logger = Logger.getLogger("CordovaLog");
-
-
         nepClient = new AllPosClient(this, logger, ctx, false);
+        loginRequest = getLoginRequest();
 
-//        nepClient.getTerminalInformation();
-
-        String[] nepWebUrlList = {nepwebUrl};
-        loginRequest = new LoginRequest(merchantId, nepWebUrlList, LoadBalancingAlgorithm.FIRST_ALIVE, null);
-
-        LOG.w("eliberty.cordova.plugin.nepting", "nepClient.login : " + loginRequest.toString());
         logger.log(Level.INFO, "nepClient.login : " + loginRequest.toString());
 
         iterateTransactionEnded = 0;
@@ -215,7 +235,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
         try {
             this.closeNeptingSDK();
 
-            LOG.w("eliberty.cordova.plugin.nepting", "call error callback runCallbackError");
+            logger.log(Level.INFO, "call error callback runCallbackError");
             JSONObject obj = new JSONObject();
             obj.put("code", code);
             obj.put("message", message);
@@ -224,15 +244,15 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
             result.setKeepCallback(true);
 
             this.extractLogToSentry();
-            sentry.sendMessage("runCallbackError with code : " + code + " and message : " + message);
+            sentry.sendMessage("Payment Error with code : " + code + " - " + orderId + "/" + deviceId);
 
             callbackContext.sendPluginResult(result);
         } catch (JSONException jse) {
-            LOG.w("eliberty.cordova.plugin.nepting", "JSONException : " + jse.getMessage());
+            logger.log(Level.SEVERE, "JSONException : " + jse.getMessage());
             this.extractLogToSentry();
             sentry.sendException(jse);
         } catch (Exception ex) {
-            LOG.w("eliberty.cordova.plugin.nepting", "Exception", ex);
+            logger.log(Level.SEVERE, "Exception", ex);
             this.extractLogToSentry();
             sentry.sendException(ex);
         }
@@ -247,26 +267,26 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
      */
     private void runCallbackSuccess(String code, String message, JSONObject params) {
         try {
-            LOG.w("eliberty.cordova.plugin.nepting", "call success callback runCallbackSuccess");
+            logger.log(Level.INFO, "call success callback runCallbackSuccess");
             JSONObject obj = new JSONObject();
             obj.put("code", code);
             obj.put("message", message);
 
             JSONObject merged = merge(obj, params);
 
-            LOG.w("eliberty.cordova.plugin.nepting", "runCallbackSuccess merged : " + merged.toString());
+            logger.log(Level.INFO, "runCallbackSuccess merged : " + merged.toString());
 
             PluginResult result = new PluginResult(PluginResult.Status.OK, merged);
             result.setKeepCallback(true);
             callbackContext.sendPluginResult(result);
         } catch (JSONException jse) {
-            LOG.w("eliberty.cordova.plugin.nepting", "JSONException : " + jse.getMessage());
+            logger.log(Level.INFO, "JSONException : " + jse.getMessage());
             this.extractLogToSentry();
             sentry.sendException(jse);
 
             runCallbackError(Integer.toString(jse.hashCode()), jse.getMessage());
         } catch (Exception ex) {
-            LOG.w("eliberty.cordova.plugin.nepting", "Exception", ex);
+            logger.log(Level.INFO, "Exception", ex);
             this.extractLogToSentry();
             sentry.sendException(ex);
             runCallbackError(Integer.toString(ex.hashCode()), ex.getMessage());
@@ -302,7 +322,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
      */
     @Override
     public void transactionEnded(TransactionResponse transactionResponse) {
-        LOG.w("eliberty.cordova.plugin.nepting", "transactionEnded : " + transactionResponse.toString());
+        logger.log(Level.INFO, "transactionEnded : " + transactionResponse.toString());
 
         try {
             JSONObject params = new JSONObject();
@@ -312,36 +332,41 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
             params.put("receipt", transactionResponse.getCustomerTicket());
             params.put("transactionDate", transactionResponse.getDateTime());
 
-            LOG.w("eliberty.cordova.plugin.nepting", "transactionEnded params : " + params.toString());
+            logger.log(Level.INFO, "transactionEnded params : " + params.toString());
 
             if (transactionResponse.getGlobalStatus().toString().toUpperCase().equals("SUCCESS") && 1 == iterateTransactionEnded) {
+                logger.log(Level.INFO, "transactionEnded with SUCCESS");
                 runCallbackSuccess(transactionResponse.getGlobalStatus().toString().toUpperCase(), "", params);
+                this.closeNeptingSDK();
             } else if (transactionResponse.getExtendedResultList().contains(ExtendedResult.Sys_NepsaTimeoutCompletion.getCode()) && 0 == iterateTransactionEnded) {
+
+                logger.log(Level.INFO, "transactionEnded with Sys_NepsaTimeoutCompletion get LAST_TRANSACTION");
                 iterateTransactionEnded++;
-                TransactionRequest transactionRequest = new TransactionRequest(TransactionType.LAST_TRANSACTION, amount, defaultCurrency, false, Long.toString(System.currentTimeMillis()));
+                TransactionRequest transactionRequest = new TransactionRequest(TransactionType.LAST_TRANSACTION, 0, defaultCurrency, false, Long.toString(System.currentTimeMillis()));
+                transactionRequest.setMerchantTransactionId(orderId);
                 nepClient.startTransaction(transactionRequest);
             } else {
+                logger.log(Level.INFO, "transactionEnded " + transactionResponse.getGlobalStatus().toString().toUpperCase());
                 this.extractLogToSentry();
 
                 EventBuilder eventBuilder = new EventBuilder()
-                        .withMessage("Paiement " + transactionResponse.getGlobalStatus().toString().toUpperCase())
+                        .withMessage("Payment " + transactionResponse.getGlobalStatus().toString().toUpperCase() + " - " + orderId + "/" + deviceId + " " + transactionResponse.getExtendedResultList().toString())
                         .withLevel(Event.Level.INFO)
                         .withExtra("params", params)
-                        .withLogger(CordovaNepting.class.getName());
+                        .withLogger(logger.getName());
 
                 sentry.sendEvent(eventBuilder);
 
                 runCallbackSuccess(transactionResponse.getGlobalStatus().toString().toUpperCase(), "", params);
+                this.closeNeptingSDK();
             }
-
-            this.closeNeptingSDK();
         } catch (JSONException ex) {
-            LOG.w("eliberty.cordova.plugin.nepting", "JSONException: " + ex.getMessage());
+            logger.log(Level.SEVERE, "JSONException: " + ex.getMessage());
             this.extractLogToSentry();
             sentry.sendException(ex);
             runCallbackError(Integer.toString(ex.hashCode()), ex.getMessage());
         } catch (Exception e) {
-            LOG.w("eliberty.cordova.plugin.nepting", "Exception: " + e.getMessage());
+            logger.log(Level.SEVERE, "Exception: " + e.getMessage());
             this.extractLogToSentry();
             sentry.sendException(e);
             runCallbackError(Integer.toString(e.hashCode()), e.getMessage());
@@ -355,14 +380,14 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
      */
     @Override
     public void loginEnded(LoginResponse loginResponse) {
-        LOG.w("eliberty.cordova.plugin.nepting", "loginEnded : " + loginResponse.toString());
+        logger.log(Level.INFO, "loginEnded : " + loginResponse.toString());
 
         List<Integer> retryCodeError = new ArrayList<Integer>();
         retryCodeError.add(ExtendedResult.Sys_ConnectionError.getCode());
         retryCodeError.add(ExtendedResult.Sys_CommunicationError.getCode());
 
         if (loginResponse.isSuccessful()) {
-            LOG.w("eliberty.cordova.plugin.nepting", "loginEnded success");
+            logger.log(Level.INFO, "loginEnded success");
             // Process Transaction
             TransactionRequest transactionRequest = new TransactionRequest(TransactionType.DEBIT, amount, defaultCurrency, false, Long.toString(System.currentTimeMillis()));
             transactionRequest.setPrivateData("orderID:" + orderId + "&deviveID:" + deviceId);
@@ -372,7 +397,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
             iterateLoginEnded++;
             nepClient.login(loginRequest);
         } else {
-            LOG.w("eliberty.cordova.plugin.nepting", "loginEnded failed : " + loginResponse.getGlobalStatus().toString());
+            logger.log(Level.INFO, "loginEnded failed : " + loginResponse.getGlobalStatus().toString());
             // Display error message
             runCallbackError(LOGIN_FAILED, "");
         }
@@ -386,7 +411,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
      */
     @Override
     public void fetchLocalTransactionListEnded(int integer) {
-        LOG.w("eliberty.cordova.plugin.nepting", "fetchLocalTransactionListEnded : " + integer);
+        logger.log(Level.INFO, "fetchLocalTransactionListEnded : " + integer);
     }
 
     /**
@@ -397,14 +422,14 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
      */
     @Override
     public void getTerminalInformationEnded(TerminalInformation terminalInformation) {
-        LOG.w("eliberty.cordova.plugin.nepting", "getTerminalInformationEnded : " + terminalInformation.toString());
+        logger.log(Level.INFO, "getTerminalInformationEnded : " + terminalInformation.toString());
 
-//        LOG.w("eliberty.cordova.plugin.nepting", "getClientVersion : " + terminalInformation.getClientVersion());
-//        LOG.w("eliberty.cordova.plugin.nepting", "getFirmwareVersion : " + terminalInformation.getFirmwareVersion());
-//        LOG.w("eliberty.cordova.plugin.nepting", "getModel : " + terminalInformation.getModel());
-//        LOG.w("eliberty.cordova.plugin.nepting", "getSerialNumber : " + terminalInformation.getSerialNumber());
-//        LOG.w("eliberty.cordova.plugin.nepting", "getSupplier : " + terminalInformation.getSupplier());
-//        LOG.w("eliberty.cordova.plugin.nepting", "getOfflineTransactionsCount : " + terminalInformation.getOfflineTransactionsCount());
+        logger.log(Level.INFO, "getClientVersion : " + terminalInformation.getClientVersion());
+        logger.log(Level.INFO, "getFirmwareVersion : " + terminalInformation.getFirmwareVersion());
+        logger.log(Level.INFO, "getModel : " + terminalInformation.getModel());
+        logger.log(Level.INFO, "getSerialNumber : " + terminalInformation.getSerialNumber());
+        logger.log(Level.INFO, "getSupplier : " + terminalInformation.getSupplier());
+        logger.log(Level.INFO, "getOfflineTransactionsCount : " + terminalInformation.getOfflineTransactionsCount());
     }
 
     /**
@@ -429,42 +454,42 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
         this.actionResult = null;
         long timer = action.getTimeoutMs() / 500;
 
-        LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest : " + action.getActionType() + " message : " + action.getMessage());
+        logger.log(Level.INFO, "postUIRequest : " + action.getActionType() + " message : " + action.getMessage());
 
         if (action.getActionType().equals(ActionType.MESSAGE)) {
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 1 TYPE: " + action.getActionType() + " message : " + action.getMessage());
+            logger.log(Level.INFO, "postUIRequest 1 TYPE: " + action.getActionType() + " message : " + action.getMessage());
             runCallbackSuccess(MESSAGE, action.getMessage(), new JSONObject());
             return null;
         } else if (action.getActionType().equals(ActionType.QUESTION)) {
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
+            logger.log(Level.INFO, "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
 
             runCallbackSuccess(MESSAGE, action.getMessage(), new JSONObject());
 
             cordova.getActivity().runOnUiThread(getModalQuestion());
         } else if (action.getActionType().equals(ActionType.KEYS_ENTRY)) {
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
+            logger.log(Level.INFO, "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
 
             runCallbackSuccess(MESSAGE, action.getMessage(), new JSONObject());
 
             cordova.getActivity().runOnUiThread(getModalKeysEntry());
         } else if (action.getActionType().equals(ActionType.MENU)) {
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
+            logger.log(Level.INFO, "postUIRequest 2 TYPE: " + action.getActionType() + " message : " + action.getMessage());
 
             runCallbackSuccess(MESSAGE, action.getMessage(), new JSONObject());
 
             cordova.getActivity().runOnUiThread(getModalMenu());
         } else {
-            LOG.w("eliberty.cordova.plugin.nepting", "Unknown action " + action.getActionType());
+            logger.log(Level.INFO, "Unknown action " + action.getActionType());
             return null;
         }
 
         while (timer > 0 && actionResult == null) {
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest iteration");
+            logger.log(Level.INFO, "postUIRequest iteration");
             timer--;
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-                LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest InterruptedException" + e.getMessage());
+                logger.log(Level.INFO, "postUIRequest InterruptedException" + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -486,7 +511,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
         }
 
         if (action.getActionType() != ActionType.QUESTION) {
-            LOG.w("callUIAction", "Authentication only for question for the moment");
+            logger.log(Level.INFO, "Authentication only for question for the moment");
             return actionResult;
         }
 
@@ -510,7 +535,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
             alert.setTitle(action.getActionType().toString());
             alert.setMessage(action.getMessage());
 
-            LOG.w("eliberty.cordova.plugin.nepting", "getModalQuestion nbelement : " + action.getLabelList().length);
+            logger.log(Level.INFO, "getModalQuestion nbelement : " + action.getLabelList().length);
 
             alert.setPositiveButton(action.getLabelList()[0], new DialogInterface.OnClickListener() {
                 @Override
@@ -532,7 +557,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
                 });
             }
 
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest before AlertDialog show");
+            logger.log(Level.INFO, "postUIRequest before AlertDialog show");
 
             matbdf = alert.show();
         };
@@ -576,7 +601,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
                 }
             });
 
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest before AlertDialog show");
+            logger.log(Level.INFO, "postUIRequest before AlertDialog show");
 
             kedf = alert.show();
         };
@@ -599,7 +624,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
                 }
             });
 
-            LOG.w("eliberty.cordova.plugin.nepting", "postUIRequest before AlertDialog show");
+            logger.log(Level.INFO, "postUIRequest before AlertDialog show");
 
             mdf = alert.show();
         };
@@ -628,7 +653,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
                 }
             }
         } catch (IOException e) {
-            LOG.w("eliberty.cordova.plugin.nepting", "IOException " + e.getMessage());
+            logger.log(Level.INFO, "IOException " + e.getMessage());
         }
     }
 
@@ -642,7 +667,7 @@ public class CordovaNepting extends CordovaPlugin implements UICallback {
                 nepClient.interrupt();
             }
         } catch (Exception e) {
-            LOG.w("eliberty.cordova.plugin.nepting", "closeNeptingSDK Exception : " + e.getMessage());
+            logger.log(Level.INFO, "closeNeptingSDK Exception : " + e.getMessage());
         }
     }
 

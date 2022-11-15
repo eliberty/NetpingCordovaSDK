@@ -6,8 +6,7 @@ Ludovic Menu @Eliberty Services SAS
 INSTALL :
 ---------
 
-cordova plugin add https://github.com/eliberty/PayzenCordovaPlugin
-
+cordova plugin add https://github.com/eliberty/NetpingCordovaSDK
 
 HOW TO USE IN EcmaScript 2015/ES6 :
 -----------------------------------

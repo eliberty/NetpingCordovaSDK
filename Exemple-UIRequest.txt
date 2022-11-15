@@ -1,0 +1,195 @@
+   
+    /**
+     * Update UI on controller request
+     *
+     * @param request
+     */
+    public String postUIRequest(UIRequest action) {
+
+        this.action = action;
+        this.actionResult = null;
+        long timer = action.getTimeoutMs() / 500;
+
+        MessageAndTwoButtonsDialogFragment matbdf = null;
+        MenuDialogFragment mdf = null;
+        KeysEntryDialogFragment kedf = null;
+
+        //if (!action.isAuthenticationNeeded()) {
+	    if (action.getActionType() == ActionType.MESSAGE) {
+                Log.d("callUIAction", "Display message action...");
+                transactionMessageText.setText(request.getMessage());
+                return null;
+            }
+            if (action.getActionType() == ActionType.QUESTION) {
+                Log.d("callUIAction", "Display question action...");
+                matbdf = new MessageAndTwoButtonsDialogFragment();
+                matbdf.show(((Activity) this.getContext()).getFragmentManager(), "Dialog");
+            }
+            else if (action.getActionType() == ActionType.KEYS_ENTRY) {
+                if (action.getCode() == MessageCode.BT_DISCOVERY_QR_CODE_ENTRY) {
+        		Log.d("callUIAction", "Keys entry action for BT_DISCOVERY_QR_CODE_ENTRY...");
+        		// todo : insert code to scan and send the mac address to the android sdk
+      		} else {
+        		Log.d("callUIAction", "Display keys entry action...");
+        		kedf = new KeysEntryDialogFragment();
+        		kedf.show(((Activity) this.getContext()).getFragmentManager(), "Dialog");
+      		}
+            }
+            else if (action.getActionType() == ActionType.MENU) {
+                Log.d("callUIAction", "Display menu action...");
+                // display a menu
+                mdf = new MenuDialogFragment();
+                mdf.show(((Activity) this.getContext()).getFragmentManager(), "Dialog");
+            }
+            else {
+                Log.e("callUIAction", "Unknown action "+action.getActionType());
+                return null;
+            }
+
+        //}
+
+
+        while (timer > 0 && actionResult == null) {
+            timer--;
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        if (matbdf != null) {
+            matbdf.dismiss();
+        }
+        if (kedf != null) {
+            kedf.dismiss();
+        }
+        if (mdf != null) {
+            mdf.dismiss();
+        }
+
+
+      if (!action.isAuthenticationNeeded()) {
+        return actionResult;
+      }
+
+      if (action.getActionType() != ActionType.QUESTION) {
+        Log.d("callUIAction", "Authentication only for question for the moment");
+        return actionResult;
+      }
+
+      // todo: /!\ works with first label
+      if (actionResult == null || !actionResult.contentEquals(action.getLabelList()[0])) {
+        return actionResult;
+      }
+
+      String actionResultSaved=actionResult;
+
+      do {
+
+        String[] buttonLabelTab = {"ANNULER", "VALIDER"};
+        UIRequest uiRequest = new UIRequest(ActionType.KEYS_ENTRY, "Veuillez saisir votre mot de passe:", 60000, false, buttonLabelTab, MessageCode.UNKNOWN);
+        String result = callUIAction(uiRequest);
+        String[] resultTab = result.split(";");
+        if (resultTab[0].contentEquals(buttonLabelTab[1])) {
+          if(resultTab.length > 1)   {
+            String pwd = resultTab[1];
+            if(pwd.hashCode() == hashedPassword) {
+              return actionResultSaved;
+            }
+          }
+
+          String[] validButton = {"VALIDER"};
+          uiRequest = new UIRequest(ActionType.QUESTION, "Votre mot de passe est incorrect.", 30000, false, validButton, MessageCode.UNKNOWN);
+          callUIAction(uiRequest);
+        }
+        else {
+          return null; // We act like a timeout
+        }
+
+      }
+      while(true);
+
+    }
+
+    // The question dialog fragment
+    public class MessageAndTwoButtonsDialogFragment extends DialogFragment {
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            // Use the Builder class for convenient dialog construction
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            builder.setMessage(action.getMessage());
+            builder.setPositiveButton(action.getLabelList()[0], new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            actionResult = action.getLabelList()[0];
+                        }
+                    });
+            if (action.getLabelList().length > 1) {
+                builder.setNegativeButton(action.getLabelList()[1], new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                                actionResult = action.getLabelList()[1];
+                            }
+                    });
+            }
+            // Create the AlertDialog object and return it
+            return builder.create();
+        }
+    }
+
+    // The menu dialog fragment
+    public class MenuDialogFragment extends DialogFragment {
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            builder.setTitle(action.getMessage());
+            builder.setItems(action.getLabelList(), new DialogInterface.OnClickListener() {
+                       public void onClick(DialogInterface dialog, int which) {
+                           // The 'which' argument contains the index position of the selected item
+                           actionResult = action.getLabelList()[which];
+                       }
+                   });
+            // Create the AlertDialog object and return it
+            return builder.create();
+        }
+    }
+
+    // The keyEntry dialog fragment
+    public class KeysEntryDialogFragment extends DialogFragment {
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            builder.setTitle(action.getMessage());
+            // Get the layout inflater
+            LayoutInflater inflater = getActivity().getLayoutInflater();
+
+            // Inflate and set the layout for the dialog
+            // Pass null as the parent view because its going in the dialog layout
+            builder.setView(inflater.inflate(R.layout.keys_entry_dialog, null));
+
+            // Add action buttons
+            builder.setPositiveButton(action.getLabelList()[0], new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int id) {
+                            // concat button text and text entry
+                            //View view = getActivity().getLayoutInflater().inflate(R.layout.keys_entry_dialog, null);
+                            EditText keysEntryEditText = (EditText) KeysEntryDialogFragment.this.getDialog().findViewById(R.id.keysEntryEditText);
+                            String concat = action.getLabelList()[0];
+                            concat = concat + ";" + keysEntryEditText.getText().toString();
+                            actionResult = concat;
+                        }
+                    });
+            builder.setNegativeButton(action.getLabelList()[1], new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // concat button text and text entry
+                            //View view = getActivity().getLayoutInflater().inflate(R.layout.keys_entry_dialog, null);
+                            EditText keysEntryEditText = (EditText) KeysEntryDialogFragment.this.getDialog().findViewById(R.id.keysEntryEditText);
+                            String concat = action.getLabelList()[1];
+                            concat = concat + ";" + keysEntryEditText.getText().toString();
+                            actionResult = concat;
+                        }
+                    });
+            // Create the AlertDialog object and return it
+            return builder.create();
+        }
+    }

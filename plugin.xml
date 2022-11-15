@@ -30,7 +30,7 @@
 
     <source-file src="src/android/CordovaNepting.java" target-dir="src/com/eliberty/cordova/plugin/nepting/" />
 
-    <lib-file src="nepting_allpos-2.0.6-REV10264.jar" />
+    <lib-file src="nepting_allpos-2.0.7-REV20443.jar" />
     <lib-file src="ksoap2-android-assembly-3.3.0-jar-with-dependencies.jar" />
     <lib-file src="GLComm_V1.03.03_20190430.jar" />
 
